@@ -2,34 +2,42 @@ package com.example.derpworthy;
 
 import java.util.ArrayList;
 
-public class ChatSession{
-	
-	private String lastUser;
+import com.example.derpworthy.ChatDaemon.IChatListener;
+
+public class ChatSession {
+
 	private ArrayList<ChatItem> chatLog;
-	
-	public ChatSession(){
-		this.lastUser = "";
+	private ArrayList<IChatListener> listeners;
+
+	public ChatSession() {
 		this.chatLog = new ArrayList<ChatItem>();
+		this.listeners = new ArrayList<ChatDaemon.IChatListener>();
 	}
-	
+
 	public ChatSession(ArrayList<ChatItem> chatLog) {
-		this.lastUser = "";
 		this.chatLog = chatLog;
-	}
-	
-	public ArrayList<ChatItem> getChatLog() {
-		return chatLog;
-	}
-	
-	public void setChatLog(ArrayList<ChatItem> chatLog) {
-		this.chatLog = chatLog;
+		this.listeners = new ArrayList<ChatDaemon.IChatListener>();
 	}
 
-	public String getLastUser() {
-		return lastUser;
+	public void chat(String message, String userName) {
+		ChatItem newChat = new ChatItem(message, userName);
+		this.chatLog.add(newChat);
+		notify(newChat);
 	}
 
-	public void setLastUser(String lastUser) {
-		this.lastUser = lastUser;
+	private void notify(ChatItem newChat) {
+		for (IChatListener listener : listeners) {
+			if (listener != null) {
+				listener.onChat(newChat);
+			}
+		}
+	}
+
+	public void addListener(IChatListener listener) {
+		this.listeners.add(listener);
+	}
+
+	public void removeListener(IChatListener listener) {
+		this.listeners.remove(listener);
 	}
 }

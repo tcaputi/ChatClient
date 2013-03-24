@@ -9,12 +9,18 @@
 	</context-param>
 	<servlet>
 		<servlet-name>Derpworthy Application</servlet-name>
-		<servlet-class>com.vaadin.server.VaadinServlet</servlet-class>
+		<servlet-class>org.vaadin.artur.icepush.ICEPushServlet</servlet-class>
 		<init-param>
 			<description>
 			Vaadin UI class to use</description>
 			<param-name>UI</param-name>
 			<param-value>com.example.derpworthy.DerpworthyUI</param-value>
+		</init-param>
+		<init-param>
+			<description>
+			Application widgetset</description>
+			<param-name>widgetset</param-name>
+			<param-value>com.example.derpworthy.widgetset.DerpworthyWidgetset</param-value>
 		</init-param>
 	</servlet>
 	<servlet-mapping>

@@ -14,6 +14,10 @@
 		<conf name="widgetset-compile" />
 	</configurations>
 	<dependencies>
+	    <!-- ICEPush -->
+		<dependency org="org.vaadin.addons" name="icepush" rev="0.5.5" />
+		<dependency org="org.icepush" name="icepush" rev="3.2.0"/>
+		
 		<!-- The core server part of Vaadin -->
 		<dependency org="com.vaadin" name="vaadin-server" rev="&vaadin.version;"
 			conf="default->default" />
@@ -27,12 +31,13 @@
 
 		<!-- Vaadin client side, needed for widget set compilation -->
 		<dependency org="com.vaadin" name="vaadin-client" rev="&vaadin.version;" />
+		
+		<dependency org="com.vaadin" name="vaadin-client" rev="&vaadin.version;" />
 
 		<!-- Compiler for custom widget sets. Should not be deployed -->
 		<dependency org="com.vaadin" name="vaadin-client-compiler"
 			rev="&vaadin.version;" conf="widgetset-compile->default" />
 		
-		<dependency org="org.vaadin.addons" name="icepush" rev="0.5.5" />
 	</dependencies>
 </ivy-module>
     

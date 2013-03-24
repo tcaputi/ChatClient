@@ -1,12 +1,13 @@
 package com.example.derpworthy;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
-import com.vaadin.event.FieldEvents.TextChangeEvent;
-import com.vaadin.event.FieldEvents.TextChangeListener;
+import org.vaadin.artur.icepush.ICEPush;
+
+import com.example.derpworthy.ChatDaemon.IChatListener;
+import com.vaadin.event.ShortcutAction;
+import com.vaadin.event.ShortcutListener;
 import com.vaadin.server.VaadinRequest;
-import com.vaadin.ui.Button;
-import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.TextArea;
 import com.vaadin.ui.TextField;
@@ -14,73 +15,90 @@ import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
 
 @SuppressWarnings("serial")
-public class DerpworthyUI extends UI{
+public class DerpworthyUI extends UI {
+	private static final String SESSION_ID_PARAM_KEY = "sessionId";
+	private static final String USERNAME_PARAM_KEY = "userName";
 
-	private static ConcurrentHashMap<Long, ChatSession> allChats;
-	private static long nextSessionId;
+	private static final Long SESSION_ID_DEFAULT = 0L;
+	private static final String USER_NAME_DEFAULT = "Le Derpface";
 
-	private long sessionId = 0; //where does this get passed in from?
-	private String username = "caputit1"; //where does this get passed in from?
+	private ICEPush pusher = new ICEPush();
 	private VerticalLayout layout = new VerticalLayout();
 	private Label debugInfo;
 	private TextArea textArea;
 	private TextField textField;
-	
+
+	private Long sessionId = null;
+	private String userName = null;
+	private ChatSession chatSession = null;
+
 	@Override
 	protected void init(VaadinRequest request) {
+		// Get the sessionId and userName from HTTP GET parameters
+		Map<String, String[]> paramMap = request.getParameterMap();
+		if (paramMap != null) {
+			String[] params = paramMap.get(SESSION_ID_PARAM_KEY);
+			if (params != null && params.length == 1) {
+				if (params[0] != null && !params[0].equals("")) {
+					this.sessionId = Long.parseLong(params[0]);
+				}
+			}
+			params = paramMap.get(USERNAME_PARAM_KEY);
+			if (params != null && params.length == 1) {
+				if (params[0] != null && !params[0].equals("")) {
+					this.userName = params[0];
+				}
+			}
+		}
+		// Make the parameters default if left undefined
+		if (this.sessionId == null) {
+			this.sessionId = SESSION_ID_DEFAULT;
+		}
+		if (this.userName == null) {
+			this.userName = USER_NAME_DEFAULT;
+		}
+
+		this.chatSession = ChatDaemon.getInstance().joinSession(this.sessionId, new LocalChatListener());
 		layout.setMargin(true);
 		setContent(layout);
-		
-		sessionId = getNextSessionId();
-		if(allChats == null) allChats = new ConcurrentHashMap<Long, ChatSession>();
-		if(allChats.get(sessionId) == null) allChats.put(sessionId, new ChatSession());
 
-		debugInfo = new Label("Username: " + username + " | SessionId: " + sessionId);
+		debugInfo = new Label("Username: " + userName + " | SessionId: " + sessionId);
 		textArea = new TextArea("Chat Log:");
 		textField = new TextField("Type Here:");
-		
-		textField.addTextChangeListener(new TextChangeListener() {
-		    public void textChange(TextChangeEvent event) {
-		    	//dont know why this isnt working either...
-		        if(event.getText().endsWith("\n")) enterMessage();
-		    }
-		});
 
-		Button button = new Button("Enter");
-		button.addClickListener(new Button.ClickListener() {
-			public void buttonClick(ClickEvent event) {
-				enterMessage();
+		ShortcutListener submitListener = new ShortcutListener("Chat Submit Shortcut", ShortcutAction.KeyCode.ENTER, null) {
+
+			@Override
+			public void handleAction(Object sender, Object target) {
+				chatSession.chat(textField.getValue(), userName);
+				textField.setValue("");
+				textField.focus();
 			}
-		});
-		
+		};
+
+		textField.setImmediate(true);
+		textField.addShortcutListener(submitListener);
+
 		layout.addComponent(debugInfo);
 		layout.addComponent(textArea);
 		layout.addComponent(textField);
-		layout.addComponent(button);
+		
+		// Attaches ICEPush to the UI
+		this.pusher.extend(this);
 	}
 
-	private long getNextSessionId() {
-//		nextSessionId++;
-//		return nextSessionId;
-		return 0;
-	}
-	
-	private void enterMessage(){
-		ChatItem newCI = new ChatItem(textField.getValue(), username);
-		ChatSession session = allChats.get(sessionId);
-		session.setLastUser(username);
-		session.getChatLog().add(newCI);
-		updateChatLog();
-		//notify other users to run updateChatLog();
-		textField.setValue("");
-	}
+	private class LocalChatListener implements IChatListener {
 
-	private void updateChatLog(){
-		ChatSession cs = allChats.get(sessionId);
-		String chatDisplay = "";
-		for(ChatItem ci : cs.getChatLog()){
-			chatDisplay += ci.getUserName() + ": " + ci.getMessage() + "\n";
+		@Override
+		public void onChat(ChatItem item) {
+			StringBuilder builder = new StringBuilder(textArea.getValue());
+			builder.append(item.getUserName());
+			builder.append(": ");
+			builder.append(item.getMessage());
+			builder.append('\n');
+			textArea.setValue(builder.toString());
+			pusher.push();
 		}
-		textArea.setValue(chatDisplay);
+
 	}
 }
